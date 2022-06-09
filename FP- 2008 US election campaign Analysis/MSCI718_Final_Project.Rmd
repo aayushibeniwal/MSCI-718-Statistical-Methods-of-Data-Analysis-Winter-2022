@@ -1,0 +1,464 @@
+---
+title: "MSCI718_Final_Project"
+author: "Aayushi Beniwal"
+date: "08/04/2022"
+output: html_document
+---
+## Section 1: R Programming Question 1
+### 1 (a) 
+Simulating the process once by generating the arrival time of patients using exp function as it is
+exponentially distributed. After that I am calculating the waiting time for the patient by calculating the index value of the min doc appoint time(out if 3 doctors) and then on that index value updating the new waiting time for the doc by summing up prev arrival time with uniformly distributed number using runif (between 5 mins to 20 mins) which gives one random value. By taking  mean of the waiting time I am calculating final avg mean time. The max time left in the doctor appoint time list will be the closing time for the hospital.
+```{r}
+# Section 1: R Programming Question 1
+
+# ________ Question 1 (a) _______
+#(a) Simulating the process once. 
+set.seed(7)
+# 9 am to 4 pm will be 420 mins
+max_time <- 420
+last_time <- 0
+waiting_time <- c()
+tot_waiting_patients <- 0
+tot_patients <- 0
+# there are 3 doctors in clinic
+doc_appoint_time <- c(0, 0, 0)
+
+while (last_time < max_time) {
+  # arrival time of patients is exponentially distributed with expectation of 10 mins
+  time_arrival <- last_time + rexp(1, rate = 1/10)
+  tot_patients <- tot_patients + 1
+  last_time <- time_arrival
+  
+  min_doc_appoint_time <- which.min(doc_appoint_time)
+  wait_time <- max(c(0, doc_appoint_time[min_doc_appoint_time] - time_arrival))
+  if (wait_time > 0) {
+    # Patients waiting for a doctor
+    tot_waiting_patients <- tot_waiting_patients + 1
+    waiting_time <- append(waiting_time, wait_time)
+  }
+  # time spent by doc on each patient is uniform between 5 to 20 mins
+  doc_appoint_time[min_doc_appoint_time] <- time_arrival + wait_time + runif(1, 5, 20)
+}
+# avg wait time for patients 
+if (length(waiting_time) == 0) {
+  avg_waittime <- 0
+}else {
+  avg_waittime <- mean(waiting_time)
+}
+
+# Office closing time
+office_close <- max(doc_appoint_time)
+office_close_time <- office_close - max_time
+
+# summary of outputs
+df1a <- data.frame(tot_patients = tot_patients,tot_waiting_patients = tot_waiting_patients,
+                   avg_waittime = avg_waittime)
+df1a
+print(paste(" Office close time: 4:",as.integer(office_close_time),"p.m."))
+```
+
+### 1 (b) 
+Simulating the above process 1000 times and saving the final values in a list and append in it every time so that after the for loop I can take the final median values.
+```{r}
+# ________ Question 1 (b) _______
+#(b) Simulating the process 1000 times 
+set.seed(7)
+num_simulations <- 1000
+avg_waiting_time_l <- c()
+office_close_time_l <- c()
+tot_patients_list <- c()
+tot_patients_waiting_l <- c()
+
+
+for (i in 1:num_simulations) {
+  last_time <- 0
+  waiting_time <- c()
+  tot_waiting_patients <- 0
+  tot_patients <- 0
+  # there are 3 doctors in clinic
+  doc_appoint_time <- c(0, 0, 0)
+  while (last_time < max_time) {
+    # arrival time of patients is exponentially distributed with expectation of 10 mins
+    time_arrival <- last_time + rexp(1, rate = 1/10)
+    tot_patients <- tot_patients + 1
+    last_time <- time_arrival
+    
+    min_doc_appoint_time <- which.min(doc_appoint_time)
+    wait_time <- max(c(0, doc_appoint_time[min_doc_appoint_time] - time_arrival))
+    if (wait_time > 0) {
+      # Patients waiting for a doctor
+      tot_waiting_patients <- tot_waiting_patients + 1
+      waiting_time <- append(waiting_time, wait_time)
+    }
+    # time spent by doc on each patient is uniform between 5 to 20 mins
+    doc_appoint_time[min_doc_appoint_time] <- time_arrival + wait_time + runif(1, 5, 20)
+  }
+  # avg wait time for patients 
+  if (length(waiting_time) == 0) {
+    avg_waittime <- 0
+  }else {
+    avg_waittime <- mean(waiting_time)
+  }
+  
+  # Office closing time
+  office_close <- max(doc_appoint_time)
+  
+  avg_waiting_time_l <- append(avg_waiting_time_l, avg_waittime)
+  office_close_time_l <- append(office_close_time_l, office_close)
+  tot_patients_list <- append(tot_patients_list, tot_patients)
+  tot_patients_waiting_l <- append(tot_patients_waiting_l, tot_waiting_patients)
+  
+}
+
+#calculating the median values
+median_avg_waiting_time<- median(avg_waiting_time_l)
+median_office_close_time <- median(office_close_time_l)
+median_tot_patients <- median(tot_patients_list)
+median_tot_patients_waiting <- median(tot_patients_waiting_l)
+
+office_ct <- median_office_close_time - max_time
+# summary of medians
+df1b <- data.frame(median_tot_patients = median_tot_patients,median_tot_patients_waiting =    median_tot_patients_waiting,median_avg_waiting_time = median_avg_waiting_time)
+df1b 
+print(paste(" Office close time: 4:",as.integer(office_ct),"p.m."))
+```
+## Section 2: Data Analysis Question 1
+### 1 (a)
+Sub-setting Q1Data1.dta file.
+
+
+```{r}
+# Section 2: Data Analysis Question 1
+
+#___ Question 1 (a) 1)_______
+library(foreign)
+d1_r <- read.dta("Q1Data1.dta")
+
+# data frame of only four columns “state,” “marital,” “heat2,” and “heat4”
+dfset1 <- data.frame(state = d1_r$state , marital = d1_r$marital , heat2 = d1_r$heat2 , heat4 = d1_r$heat4, stringsAsFactors=FALSE)
+head(dfset1)
+nrow(dfset1)
+# Sub-setting the data by removing states Hawaii, Alaska, and Washington D.C from the data frame
+dfset1 <- dfset1[-c(which(dfset1$state == 'hawaii' | dfset1$state == 'alaska' | dfset1$state == 'washington dc')), ]
+sum(dfset1$state == 'hawaii' | dfset1$state == 'alaska' | dfset1$state == 'washington dc')
+nrow(dfset1) 
+
+#______ Question 1 (a) 2) ______
+#converting heat2 and heat4 to character
+dfset1$heat2 <- as.character(dfset1$heat2)
+dfset1$heat4 <- as.character(dfset1$heat4)
+i_toberemoved <- c()
+for(i in 1:nrow(dfset1)){
+  if (is.na(dfset1[i,3])){
+    #If neither of “heat2” and “heat4” has data, erase the corresponding row
+    if (is.na(dfset1[i,4])){
+      i_toberemoved <- append(i_toberemoved, i)
+      
+    #If no data is available in “heat2,” replace na for the corresponding value in “heat4”   
+    }else{
+      dfset1[i,3] <- dfset1[i,4]
+    }
+  }
+}
+dfset1 <- dfset1[-i_toberemoved,]
+sum(is.na(dfset1$heat2))
+#converting heat2 and heat4 to factor
+dfset1$heat2 <- as.factor(dfset1$heat2)
+dfset1$heat4 <- as.factor(dfset1$heat4)
+
+#______ Question 1 (a) 3) _________
+#3) Sub-setting the data so that it only have “dem/lean dem” and “rep/lean rep” in the “heat2” column
+dfset1 <- dfset1[c(which(dfset1$heat2 == 'dem/lean dem' | dfset1$heat2 == 'rep/lean rep')), ]
+
+#_______ Question 1 (a) 4) ________
+#convert marital to character
+dfset1$marital <- as.character(dfset1$marital)
+imarital_na <- c()
+
+for(i in 1:nrow(dfset1)){
+  if (is.na(dfset1[i,2])){
+      imarital_na <- append(imarital_na, i)
+      
+  }else if (dfset1[i,2] != "married"){
+    # Change the label of all the variables but ‘married’ (married people) in the “marital” column to ‘other’ 
+      dfset1[i,2] <- "other"
+  }
+}
+#'na' in marital to be removed in the data frame
+dfset1 <- dfset1[-imarital_na,]
+
+#convert marital back to factor
+dfset1$marital <- as.factor(dfset1$marital)
+summary(dfset1$marital)
+print(paste("total rows in Q1Data1 after subsetting",nrow(dfset1)))
+
+# removing levels of removed rows
+dfset1 = droplevels(dfset1)
+```
+### 1 (b)
+Calculating proportions for each state
+```{r}
+states <- sort(unique(dfset1$state))
+n_states <- length(states)
+
+# Creating empty dataset of 48 rows to store values
+dfresult <- data.frame(state = states, b_1 = rep(NA,n_states), b_2 = rep(NA,n_states),b_3 = rep(NA,n_states), 
+                       b_4 = rep(NA,n_states), b_5 = rep(NA,n_states), actual_marriage_gap = rep(NA,n_states))
+
+for (i in 1:nrow(dfresult)){
+  
+  #Multiply all values by 100 to convert to percentage
+  #___ Question 1 (b) 1)____
+  # the proportion of the democratic supporters
+  democratic_supporters <- nrow(dfset1[dfset1$state == dfresult[i,1] & dfset1$heat2 == "dem/lean dem",])
+  tot_candidates_state <- nrow(dfset1[dfset1$state==dfresult[i,1],])
+  dfresult[i,2] <- (democratic_supporters/tot_candidates_state)*100
+  
+  #___ Question 1 (b) 2) ___
+  # the proportion of the married people
+  married_people <- nrow(dfset1[dfset1$state==dfresult[i,1] & dfset1$marital == "married",])
+  dfresult[i,3] <- (married_people/tot_candidates_state)*100
+  
+  #___ Question 1 (b) 3) ____
+  # the ratio of the married people among the democratic supporters to the total married people
+  married_democratic <- nrow(dfset1[dfset1$state==dfresult[i,1] & dfset1$marital == "married" & dfset1$heat2 == "dem/lean dem",])
+  dfresult[i,4] <- (married_democratic/married_people)*100
+  
+  #____ Question 1 (b) 4) ___
+  #  the ratio of non-married among the democratic to the total non-married people
+  nonmarried_democratic <- nrow(dfset1[dfset1$state==dfresult[i,1] & dfset1$marital == "other" & dfset1$heat2 == "dem/lean dem",])
+  dfresult[i,5] <- (nonmarried_democratic/(tot_candidates_state-married_people))*100
+  
+  #_____ Question 1 (b) 5) ____
+  # the difference of 3) and 4).
+  dfresult[i,6] <- dfresult[i,4] - dfresult[i,5]
+  
+  # the marital gap
+  dfresult[i,7] = abs(married_democratic - nonmarried_democratic)
+}
+# the first 5 observations of these new variables
+head(dfresult,5)
+```
+### 1 (c)
+Subsetting the data in Q1Data2.csv file
+```{r}
+#_____ Question 1 (c) 1) ____
+# Sub-setting the data by removing states Hawaii, Alaska, and Washington D.C from the data frame
+d2_r <- read.csv('Q1Data2.csv',header = T)
+dfset2 <- data.frame(d2_r)
+dfset2 <- dfset2[-c(which(dfset2$state == 'Hawaii' | dfset2$state == 'Alaska' | dfset2$state == 'District of Columbia')),]
+
+#_____ Question 1 (c) 2) _____
+#sub-setting only two columns “state” and “vote_Obama_pct” (Obama’s actual vote share)
+dfset2 <- data.frame(state = dfset2$state , vote_Obama_pct = dfset2$vote_Obama_pct, stringsAsFactors=FALSE)
+
+dfset2 = droplevels(dfset2)
+# the first 5 lines of the data set
+head(dfset2, 5)
+
+```
+### 1 (d)
+ Using logistic regression for predicting vote intention
+ Assumption 1: No state-level heterogeneity : Complete Pooling, 
+ Assumption 2: Complete state-level heterogeneity : No Pooling, 
+ Assumption 3: State-level heterogeneity is unknown : Partial Pooling
+```{r}
+#_____ Question 1 (d) _______
+library(glmnet)
+# Question 1 (d) Assumption 1 No state-level heterogeneity : Complete Pooling
+# using lasso
+y <- dfset1$heat2
+mm_predictor1 <- model.matrix(heat2~0+marital , data=dfset1[1:3])
+complete_pooling <- glmnet(mm_predictor1, y, alpha = 1, lambda = 0, family = "binomial")
+coef(complete_pooling)
+
+# Question 1 (d) Assumption 2 Complete state-level heterogeneity : No Pooling
+# using lasso
+mm_predictor2 <- model.matrix(heat2~0+state + marital + state*marital , data=dfset1[1:3])
+no_pooling <- glmnet(mm_predictor2, y, alpha = 1, lambda = 0, family = "binomial")
+coef(no_pooling)
+
+# Question 1 (d) Assumption 3: State-level heterogeneity is unknown : 
+# partially pooled on state intercepts and slopes. Outlying coefficients are penalized.
+# using lasso
+
+mm_predictor3 <- model.matrix(heat2~0+marital+state + state*marital , data=dfset1[1:3])
+# setting penalty factor for marital "married" and "other" column to 0 as marital is not penalized
+penaltyfactor <- rep(1,ncol(mm_predictor3))
+penaltyfactor[1] <- 0
+penaltyfactor[2] <- 0
+# calculating best lambda value
+cv_model <- cv.glmnet(mm_predictor3, y, alpha = 1,family = "binomial", penalty.factor = penaltyfactor)
+best_lambda <- cv_model$lambda.min
+
+partial_pooling <- glmnet(mm_predictor3, y, alpha = 1, lambda = best_lambda, family = "binomial", 
+                          penalty.factor = penaltyfactor)
+coef(partial_pooling)
+
+```
+
+
+
+### 1 (e) The Votes using Partial Pooling Model
+
+Democratic voters are calculated from the partial pooling model and then it can be compared from the actual votes. In the graph the square window shows the actual democratic voters to the diamond shaped obama voters with the colorful different states inverted triangles.
+
+
+```{r}
+#_____ Question 1 (e) _______
+
+# calculating prediction probability for partial pooling Assumption 1
+pred_parpooling_prob <- predict(partial_pooling, s = best_lambda, newx = mm_predictor3,  type = "class")
+
+# Creating partial pooling data frame to store values
+df_partial_pooling <- data.frame(state = dfset1$state, marital = dfset1$marital, actul_op = y, pred_parpooling_prob = pred_parpooling_prob )
+    
+# data frame to store values of predicted vote share by state, along with actual vote intention
+# and  Obama’s actual vote share for partial pooling
+df_partialpool_plotting <- data.frame(state = states, predicted_parpooling_prob = rep(NA,n_states),
+                          actual = dfresult$b_1, vote_Obama_pct = dfset2$vote_Obama_pct)
+
+for (i in 1:nrow(df_partialpool_plotting)){
+  
+  # the proportion of the democratic supporters in partial pooling
+  democratic_supporters <- nrow(df_partial_pooling[df_partial_pooling$state == df_partialpool_plotting[i,1] 
+                                                   & df_partial_pooling$s1 == "dem/lean dem",])
+  tot_candidates_state <- nrow(df_partial_pooling[df_partial_pooling$state==df_partialpool_plotting[i,1],])
+  df_partialpool_plotting[i,2] <- (democratic_supporters/tot_candidates_state)*100
+}
+
+# plotting votes v/s states using partial pooling
+
+library(ggplot2)
+ggplot(data = df_partialpool_plotting)+
+  #inverted triangle shape
+  geom_point(aes(x=state,y=predicted_parpooling_prob),shape = 6,color=1:48) +
+  #square window shape
+  geom_point(aes(x=state,y=actual),shape = 12,color=1:48)+ 
+  #diamond shape
+  geom_point(aes(x=state,y=vote_Obama_pct),shape = 18,color=1:48) + 
+  labs(x= "States", y = "percentage of votes",title = "Democratic Party Vote Analysis(Partial Pool)")+
+  theme(axis.text.x = element_text(size = 9, angle = 90, hjust = 0.5, vjust = 0.5),
+        axis.text.y = element_text(colour = "grey20", size = 12))
+
+```
+
+
+
+### 1 (f) The marital Gap using Partial Pooling
+
+the predicted marital gap will be the difference between the democratic married people to democratic other people in the partial pooling model. Comparing this from the actual marital gap in the dataset we can see in the plotted graph the window shaped are the actual marital gap and the diamond shape are the obama votes for all the states represented by the inverted colorful triangles.
+```{r}
+#_____ Question 1 (f) _______
+# The marriage gap is defined as the difference of Obama’s vote share 
+# among married and non-married people (“other”) for partial pooling
+
+df_partialpool_maritalplot <- data.frame(state = states, predicted_marriage_gap_pp = rep(NA,n_states),
+                              actual_predicted_marriage_gap = dfresult$actual_marriage_gap, vote_Obama_pct = dfset2$vote_Obama_pct)
+
+for (i in 1:nrow(df_partialpool_maritalplot)){
+  
+  # the number of the democratic married supporters state wise for partial pooling
+  democratic_supporters_marr <- nrow(df_partial_pooling[df_partial_pooling$state == df_partialpool_maritalplot[i,1] & 
+                                     df_partial_pooling$marital == "married"  & 
+                                     df_partial_pooling$s1 == "dem/lean dem",])
+  
+  # the number of the democratic other supporters state wise for partial pooling
+  democratic_supporters_oth <- nrow(df_partial_pooling[df_partial_pooling$state == df_partialpool_maritalplot[i,1] & 
+                                                         df_partial_pooling$marital == "other"  & 
+                                                         df_partial_pooling$s1 == "dem/lean dem",])
+  df_partialpool_maritalplot[i,2] <- abs(democratic_supporters_marr - democratic_supporters_oth)
+}
+
+# plotting marital gap v/s states using partial pooling
+
+library(ggplot2)
+ggplot(data = df_partialpool_maritalplot)+
+  #inverted triangle shape
+  geom_point(aes(x=state,y=predicted_marriage_gap_pp),shape = 6,color=1:48) +
+  #square window shape
+  geom_point(aes(x=state,y=actual_predicted_marriage_gap),shape = 12,color=1:48)+ 
+  #diamond shape
+  geom_point(aes(x=state,y=vote_Obama_pct),shape = 18,color=1:48) + 
+  ylim(0,300)+
+  labs(x= "States", y = "marital gap",title = "Democratic Marital Gap Modal Analysis(Partial Pool)")+
+  theme(axis.text.x = element_text(size = 9, angle = 90, hjust = 0.5, vjust = 0.5),
+        axis.text.y = element_text(colour = "grey20", size = 12))
+
+```
+
+
+### 1 (g)  The Votes and The marital Gap using No Pooling
+
+the predicted marital gap will be the difference between the democratic married people to democratic other people in the no pooling model. Comparing this from the actual marital gap in the dataset we can see in the plotted graph the window shaped are the actual marital gap and the diamond shape are the obama votes for all the states represented by the inverted colorful triangles. Democratic voters are calculated from the no pooling model and then it can be compared from the actual votes. In the graph the square window shows the actual democratic voters to the diamond shaped obama voters with the colorful different states inverted triangles.
+```{r}
+#_____ Question 1 (g) _______
+# calculating prediction probability for no pooling Assumption 2
+pred_nopooling_prob <- predict(no_pooling, s = best_lambda, newx = mm_predictor2,  type = "class")
+
+df_no_pooling <- data.frame(state = dfset1$state, marital = dfset1$marital, actul_op = y, pred_nopooling_prob = pred_nopooling_prob )
+# data frame to store values of predicted vote share by state, along with actual vote intention
+# and  Obama’s actual vote share for no pooling
+df_nopool_plotting <- data.frame(state = states, predicted_nopooling_prob = rep(NA,n_states),
+                                      actual = dfresult$b_1, vote_Obama_pct = dfset2$vote_Obama_pct)
+
+for (i in 1:nrow(df_nopool_plotting)){
+  
+  # the proportion of the democratic supporters
+  democratic_supporters_np <- nrow(df_no_pooling[df_no_pooling$state == df_nopool_plotting[i,1] 
+                                                   & df_no_pooling$s1 == "dem/lean dem",])
+  tot_candidates_state <- nrow(df_no_pooling[df_no_pooling$state==df_nopool_plotting[i,1],])
+  df_nopool_plotting[i,2] <- (democratic_supporters_np/tot_candidates_state)*100
+}
+
+# plotting votes v/s states using no pooling
+ggplot(data = df_nopool_plotting)+
+  #inverted triangle shape
+  geom_point(aes(x=state,y=predicted_nopooling_prob),shape = 6,color=1:48) +
+  #square window shape
+  geom_point(aes(x=state,y=actual),shape = 12,color=1:48)+ 
+  #diamond shape
+  geom_point(aes(x=state,y=vote_Obama_pct),shape = 18,color=1:48) + 
+  labs(x= "States", y = "percentage of votes",title = "Democratic Party Vote Analysis(No Pool)")+
+  theme(axis.text.x = element_text(size = 9, angle = 90, hjust = 0.5, vjust = 0.5),
+        axis.text.y = element_text(colour = "grey20", size = 12))
+
+
+# The marriage gap is defined as the difference of Obama’s vote share 
+# among married and non-married people (“other”) for no pooling
+df_nopool_maritalplot <- data.frame(state = states, predicted_marriage_gap_np = rep(NA,n_states),
+                                         actual_predicted_marriage_gap = dfresult$actual_marriage_gap, 
+                                         vote_Obama_pct = dfset2$vote_Obama_pct)
+
+for (i in 1:nrow(df_nopool_maritalplot)){
+  
+  # the number of the democratic married supporters state wise for no pooling
+  democratic_supporters_marr_np <- nrow(df_no_pooling[df_no_pooling$state == df_nopool_maritalplot[i,1] & 
+                                                          df_no_pooling$marital == "married"  & 
+                                                          df_no_pooling$s1 == "dem/lean dem",])
+  
+  # the number of the democratic other supporters state wise  fop no pooling
+  democratic_supporters_oth_np <- nrow(df_no_pooling[df_no_pooling$state == df_nopool_maritalplot[i,1] & 
+                                                         df_no_pooling$marital == "other"  & 
+                                                         df_no_pooling$s1 == "dem/lean dem",])
+  df_nopool_maritalplot[i,2] <- abs(democratic_supporters_marr_np - democratic_supporters_oth_np)
+}
+
+# plotting marital gap v/s states using no pooling
+
+library(ggplot2)
+ggplot(data = df_nopool_maritalplot)+
+  #inverted triangle shape
+  geom_point(aes(x=state,y=predicted_marriage_gap_np),shape = 6,color=1:48) +
+   #square window shape
+  geom_point(aes(x=state,y=actual_predicted_marriage_gap),shape = 12,color=1:48)+
+  #diamond shape
+  geom_point(aes(x=state,y=vote_Obama_pct),shape = 18,color=1:48) + 
+  ylim(0,300)+
+  labs(x= "States", y = "marital gap",title = "Democratic Marital Gap Modal Analysis(No Pool)")+
+  theme(axis.text.x = element_text(size = 9, angle = 90, hjust = 0.5, vjust = 0.5),
+        axis.text.y = element_text(colour = "grey20", size = 12))
+
+  
+
+```
